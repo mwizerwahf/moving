@@ -1,0 +1,18 @@
+{
+  "name": "car-gateway",
+  "version": "2.0.0",
+  "private": true,
+  "description": "car.mwizerwa.com gateway on Cloudflare Pages (Functions + D1)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "db:init:local": "wrangler d1 execute car-gateway --local --file=schema.sql",
+    "db:init:remote": "wrangler d1 execute car-gateway --remote --file=schema.sql",
+    "manage": "node scripts/manage.mjs",
+    "deploy": "wrangler pages deploy",
+    "test": "node --test tests/gateway.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}

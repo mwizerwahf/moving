@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": ["/static/*", "/api/docs", "/api/docs.js", "/api/openapi.json", "/robots.txt", "/favicon.ico", "/404.html"]
+}

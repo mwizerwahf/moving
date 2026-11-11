@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block main %}
+<div class="page-head"><h1>Settings</h1><p>Units, developer access and your account.</p></div>
+
+<h2>Vehicle units</h2>
+<form class="row" method="post" action="/admin/devices">
+  <input type="hidden" name="csrf" value="{{ user.csrf }}">
+  <label>IMEI <input type="text" name="imei" inputmode="numeric" pattern="[0-9]{14,16}" required placeholder="866123456789012"></label>
+  <label>Name <input type="text" name="name" maxlength="64" placeholder="Hilux 1"></label>
+  <label>Number plate <input type="text" name="plate" maxlength="32" placeholder="RAD 123 A"></label>
+  <button type="submit">Register unit</button>
+</form>
+<p class="small">Registering shows the unit's device key once. The IMEI is printed on the 4G module, or read it with <span class="mono">AT+CGSN</span>.</p>
+{% if devices %}
+<div class="table-wrap"><table>
+  <thead><tr><th>Vehicle</th><th>IMEI</th><th>Registered</th><th>Last report</th><th>Status</th></tr></thead>
+  <tbody>{% for d in devices %}
+  <tr><td><a href="/devices/{{ d.imei }}">{{ d.name or 'Unnamed' }}</a> <span class="small">{{ d.plate }}</span></td>
+    <td class="mono">{{ d.imei }}</td><td class="small">{{ d.created_at | fmt_time }}</td>
+    <td class="small">{{ d.last_seen_at | ago }}</td><td>{{ 'Accepting reports' if d.active else 'Disabled' }}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% endif %}
+
+<div class="grid-2">
+<section>
+  <h2>API tokens</h2>
+  <p class="small">Give each developer or app its own token, so you can revoke one without affecting the others. Tokens can read every vehicle; they cannot change anything.</p>
+  <form class="row" method="post" action="/admin/tokens">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <label>Who is it for <input type="text" name="name" maxlength="64" required placeholder="Fleet app, Jean"></label>
+    <button type="submit">Create token</button>
+  </form>
+  {% if tokens %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Name</th><th>Starts with</th><th>Last used</th><th></th></tr></thead>
+    <tbody>{% for t in tokens %}
+    <tr><td>{{ t.name }}</td><td class="mono">{{ t.prefix }}</td><td class="small">{{ t.last_used_at | ago }}</td>
+      <td>{% if t.revoked %}<span class="small">Revoked</span>{% else %}<form class="inline" method="post" action="/admin/tokens/{{ t.id }}/revoke"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="danger" type="submit">Revoke</button></form>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Webhooks</h2>
+  <p class="small">Each new reading is sent to these addresses as it arrives, signed with the webhook's secret. Failed sends are retried for about 2 hours.</p>
+  <form class="row" method="post" action="/admin/webhooks">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <label>Address <input type="url" name="url" required placeholder="https://app.example.com/fgt"></label>
+    <button type="submit">Add webhook</button>
+  </form>
+  {% if hooks %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Address</th><th class="num">Sent</th><th class="num">Waiting</th><th class="num">Gave up</th><th></th></tr></thead>
+    <tbody>{% for h in hooks %}
+    <tr><td class="mono break">{{ h.url }}{% if h.last_error %}<div class="small">Last problem: {{ h.last_error }}</div>{% endif %}{% if not h.active %}<div class="small">Paused</div>{% endif %}</td>
+      <td class="num">{{ h.delivered }}</td><td class="num">{{ h.pending }}</td><td class="num">{{ h.failed }}</td>
+      <td class="nowrap"><form class="inline" method="post" action="/admin/webhooks/{{ h.id }}/toggle"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="plain" type="submit">{{ 'Pause' if h.active else 'Resume' }}</button></form>
+        <form class="inline" method="post" action="/admin/webhooks/{{ h.id }}/delete"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="danger" type="submit">Delete</button></form></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% endif %}
+</section>
+</div>
+
+<h2>Your password</h2>
+<form class="stack" method="post" action="/admin/password">
+  <input type="hidden" name="csrf" value="{{ user.csrf }}">
+  <label>Current password <input type="password" name="current" autocomplete="current-password" required></label>
+  <label>New password, 12 characters or more <input type="password" name="new" autocomplete="new-password" minlength="12" required></label>
+  <label>New password again <input type="password" name="repeat" autocomplete="new-password" minlength="12" required></label>
+  <div><button type="submit">Change password</button></div>
+</form>
+<p class="small">Signed in as {{ user.username }}. Units post to <span class="mono">{{ public_url }}/ingest</span>.</p>
+{% endblock %}

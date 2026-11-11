@@ -1,0 +1,58 @@
+{
+  "schema": "fgt/2.0",
+  "imei": "866123456789012",
+  "iccid": "8925010000123456789",
+  "fw": "3.0.0",
+  "boot": "a1b2c3d4",
+  "readings": [
+    {
+      "seq": 42,
+      "ts": "2026-10-29T12:35:19Z",
+      "ts_src": "gnss",
+      "uptime_ms": 215004,
+      "gnss": {
+        "fix": true,
+        "lat": -1.944123,
+        "lng": 30.061233,
+        "alt_m": 1567,
+        "speed_kmh": 0.0,
+        "heading_deg": null,
+        "sats": 8,
+        "hdop": 1.1,
+        "age_ms": 420
+      },
+      "cell": {
+        "state": "ready",
+        "rat": "lte",
+        "mcc": 635,
+        "mnc": 10,
+        "tac": 1201,
+        "ci": 26381057,
+        "rsrp_dbm": -97,
+        "rsrq_db": -11,
+        "csq": 21
+      },
+      "cell_loc": null,
+      "veh": {
+        "ign": false,
+        "ext_mv": 12650,
+        "bat_mv": 4010
+      },
+      "fuel": [
+        {
+          "tank": 1,
+          "method": "capacitive",
+          "model": "escort_td150",
+          "raw": 2310,
+          "raw_unit": "count",
+          "temp_c": 27,
+          "status": "ok"
+        }
+      ],
+      "q": {
+        "queued": 0,
+        "dropped": 0
+      }
+    }
+  ]
+}

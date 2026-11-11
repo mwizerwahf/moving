@@ -1,0 +1,154 @@
+/* car.mwizerwa.com — square, flat, no gradients. Barlow: a typeface drawn from road signage. */
+@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap;
+  src: url("fonts/barlow-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; font-display: swap;
+  src: url("fonts/barlow-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap;
+  src: url("fonts/barlow-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 700; font-display: swap;
+  src: url("fonts/barlow-latin-700-normal.woff2") format("woff2"); }
+
+:root {
+  --paper: #ffffff;
+  --ink: #15181b;
+  --muted: #5d646b;
+  --rule: #c9ced3;
+  --panel: #eef0f2;
+  --maroon: #7a0f14;
+  --go: #2e7d32;
+  --warn: #9a5b00;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; border-radius: 0 !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink);
+  font: 400 15px/1.45 "Barlow", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+a { color: var(--maroon); text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--maroon); outline-offset: 1px; }
+h1, h2, h3 { font-weight: 600; line-height: 1.15; margin: 0; }
+h1 { font-size: 30px; letter-spacing: -0.01em; }
+h2 { font-size: 20px; margin: 32px 0 10px; }
+h3 { font-size: 16px; margin: 18px 0 6px; }
+p { max-width: 72ch; }
+code, pre, .mono { font-family: var(--mono); font-size: 13px; }
+
+/* ---------- top bar */
+.bar { display: flex; align-items: stretch; justify-content: space-between;
+  border-bottom: 2px solid var(--ink); }
+.brand { display: flex; align-items: center; gap: 10px; padding: 12px 20px;
+  font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
+.brand-mark { width: 14px; height: 14px; background: var(--maroon); }
+nav { display: flex; align-items: stretch; }
+nav a, nav button { display: flex; align-items: center; padding: 0 16px; color: var(--ink);
+  text-decoration: none; font: 500 15px "Barlow", sans-serif; border: 0;
+  border-left: 1px solid var(--rule); background: none; cursor: pointer; }
+nav a[aria-current="page"] { background: var(--ink); color: var(--paper); }
+nav a:hover, nav button:hover { background: var(--panel); }
+nav a[aria-current="page"]:hover { background: var(--ink); }
+nav form { display: flex; margin: 0; }
+
+main { padding: 24px 20px 64px; max-width: 1280px; margin: 0 auto; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px;
+  margin-bottom: 18px; }
+.page-head p { margin: 0; color: var(--muted); }
+.note { border-left: 4px solid var(--maroon); background: var(--panel); padding: 10px 14px;
+  margin: 0 0 18px; }
+.empty { border: 1px dashed var(--muted); padding: 22px; color: var(--muted); }
+
+/* ---------- tables */
+.table-wrap { overflow-x: auto; border-top: 2px solid var(--ink); }
+table { border-collapse: collapse; width: 100%; }
+th { text-align: left; font-weight: 600; font-size: 13px; color: var(--muted);
+  padding: 8px 10px; border-bottom: 1px solid var(--ink); white-space: nowrap; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:hover td { background: #f6f7f8; }
+.num { text-align: right; }
+.small { font-size: 13px; color: var(--muted); }
+.nowrap { white-space: nowrap; }
+
+/* ---------- the signature: a dashboard fuel gauge in ten segments */
+.gauge { display: inline-grid; grid-template-columns: repeat(10, 9px); gap: 2px;
+  vertical-align: middle; margin-right: 8px; }
+.gauge i { height: 14px; background: var(--panel); border: 1px solid var(--rule); }
+.gauge i.on { background: var(--ink); border-color: var(--ink); }
+.gauge.low i.on { background: var(--maroon); border-color: var(--maroon); }
+.gauge-big { grid-template-columns: repeat(10, 1fr); width: 100%; gap: 3px; margin: 6px 0 0; }
+.gauge-big i { height: 26px; }
+
+/* ---------- status */
+.dot { display: inline-block; width: 9px; height: 9px; margin-right: 6px; background: var(--rule);
+  vertical-align: 1px; }
+.dot.on { background: var(--go); }
+.src { font-size: 12px; font-weight: 600; padding: 1px 5px; border: 1px solid currentColor; }
+.src-gnss { color: var(--ink); }
+.src-cell { color: var(--warn); }
+
+/* ---------- vehicle header */
+.plate { display: inline-block; border: 2px solid var(--ink); padding: 2px 10px;
+  font-weight: 700; font-size: 18px; letter-spacing: 0.06em; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  border-top: 2px solid var(--ink); border-left: 1px solid var(--rule); margin: 0 0 20px; }
+.fact { padding: 10px 14px 12px; border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule); }
+.fact dt { font-size: 13px; color: var(--muted); }
+.fact dd { margin: 2px 0 0; font-size: 22px; font-weight: 600; }
+.fact dd .small { font-weight: 400; }
+
+/* ---------- map */
+.map { height: 380px; border: 1px solid var(--ink); margin: 0 0 24px; background: var(--panel); }
+.leaflet-bar, .leaflet-bar a, .leaflet-control-attribution, .leaflet-popup-content-wrapper,
+.leaflet-popup-tip { border-radius: 0 !important; box-shadow: none !important; }
+.leaflet-bar { border: 1px solid var(--ink) !important; }
+.leaflet-popup-content-wrapper { border: 1px solid var(--ink); }
+.leaflet-container { font: 14px "Barlow", sans-serif; }
+
+/* ---------- forms */
+form.stack { display: grid; gap: 10px; max-width: 520px; }
+label { display: grid; gap: 4px; font-weight: 500; font-size: 14px; }
+input[type=text], input[type=password], input[type=url], textarea, select {
+  font: 15px "Barlow", sans-serif; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--muted); padding: 8px 10px; width: 100%; }
+textarea { font: 13px/1.45 var(--mono); min-height: 260px; resize: vertical; }
+input:focus, textarea:focus { outline: 3px solid var(--maroon); outline-offset: -1px; }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+button, .button { font: 600 15px "Barlow", sans-serif; background: var(--ink); color: var(--paper);
+  border: 2px solid var(--ink); padding: 8px 16px; cursor: pointer; text-decoration: none;
+  display: inline-block; }
+button:hover, .button:hover { background: var(--maroon); border-color: var(--maroon); }
+button.plain { background: var(--paper); color: var(--ink); }
+button.plain:hover { background: var(--panel); border-color: var(--ink); }
+button.danger { background: var(--paper); color: var(--maroon); border-color: var(--maroon); }
+button.danger:hover { background: var(--maroon); color: var(--paper); }
+.inline { display: inline; margin: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0 40px; }
+
+/* ---------- secret shown once */
+.secret { font: 600 16px var(--mono); background: var(--ink); color: var(--paper);
+  padding: 14px 16px; word-break: break-all; user-select: all; margin: 12px 0; }
+
+/* ---------- raw JSON */
+pre.json { background: var(--panel); border-left: 4px solid var(--ink); padding: 14px 16px;
+  overflow-x: auto; margin: 0 0 20px; }
+
+/* ---------- login */
+.login { max-width: 380px; margin: 12vh auto 0; padding: 0 20px; }
+.login h1 { margin: 14px 0 6px; }
+.login .brand { padding: 0; }
+.error { color: var(--maroon); font-weight: 600; }
+
+.pager { margin-top: 14px; }
+
+@media (max-width: 720px) {
+  .bar { flex-wrap: wrap; }
+  nav { width: 100%; border-top: 1px solid var(--rule); }
+  nav a, nav button { padding: 10px 12px; flex: 1; justify-content: center; }
+  nav a:first-child { border-left: 0; }
+  h1 { font-size: 24px; }
+  .map { height: 300px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.break { word-break: break-all; }
+td:first-child { min-width: 130px; }
+td:first-child .small { white-space: nowrap; }

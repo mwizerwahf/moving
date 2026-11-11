@@ -1,0 +1,31 @@
+{% macro gauge(pct, big=false) -%}
+{%- set n = ((pct or 0) / 10) | round(0, 'ceil') | int if pct is not none else 0 -%}
+<span class="gauge{% if big %} gauge-big{% endif %}{% if pct is not none and pct < 15 %} low{% endif %}" role="img" aria-label="Fuel {{ pct if pct is not none else 'unknown' }} percent">
+{%- for i in range(10) %}<i{% if i < n %} class="on"{% endif %}></i>{% endfor -%}
+</span>
+{%- endmacro %}
+
+{% macro fuel_cell(it) -%}
+{%- set d = it.derived.fuel[0] if it and it.derived.fuel else none -%}
+{%- set f = it.payload.fuel[0] if it and it.payload.fuel is iterable and it.payload.fuel and it.payload.fuel[0] is mapping else none -%}
+{%- if d and d.litres is not none -%}
+{{ gauge(d.level_pct) }}<span class="nowrap">{{ '%.1f' % d.litres }} L</span> <span class="small">{{ '%.0f' % d.level_pct }}%</span>
+{%- elif f -%}
+<span class="small">raw {{ f.raw if f.raw is not none else '—' }} {{ f.raw_unit or '' }}, {{ d.note if d else 'no calibration' }}</span>
+{%- else -%}<span class="small">no fuel sensor</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro pos_cell(it) -%}
+{%- set p = it.derived.position if it else none -%}
+{%- if p -%}
+<span class="src src-{{ p.src }}">{{ 'GPS' if p.src == 'gnss' else 'Cell' }}</span>
+<span class="mono">{{ '%.5f' % p.lat }}, {{ '%.5f' % p.lng }}</span>{% if p.acc_m %} <span class="small">±{{ p.acc_m | round | int }} m</span>{% endif %}
+{%- else -%}<span class="small">no position</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro signal_cell(it) -%}
+{%- set c = it.payload.cell if it and it.payload.cell is mapping else none -%}
+{%- if c -%}
+{{ c.state or '—' }}{% if c.rsrp_dbm is not none %} <span class="small">{{ c.rsrp_dbm }} dBm</span>{% elif c.csq is not none %} <span class="small">CSQ {{ c.csq }}</span>{% endif %}
+{%- else -%}—{%- endif -%}
+{%- endmacro %}

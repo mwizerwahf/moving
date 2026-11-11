@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Reading {{ it.id }}{% endblock %}
+{% block main %}
+<div class="page-head">
+  <h1>Reading {{ it.id }}</h1>
+  <p><a href="/devices/{{ it.device.imei }}">{{ it.device.name or it.device.imei }}</a>, sequence {{ it.payload.seq }}, received {{ it.received_at | fmt_time }}.</p>
+</div>
+<p>This is exactly what the API, the live stream and webhooks send for this reading.</p>
+<pre class="json">{{ it | pretty }}</pre>
+{% if raw_body %}
+<h2>HTTP request body as received</h2>
+<p class="small">The unit's original request, which may hold several readings.</p>
+<pre class="json">{{ raw_body }}</pre>
+{% endif %}
+{% endblock %}

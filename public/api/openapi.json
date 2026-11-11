@@ -1,0 +1,637 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "car.mwizerwa.com gateway",
+    "version": "2.0.0",
+    "description": "Fuel and GPS telematics gateway. Devices POST fgt/2.0 to /ingest; developers read with a Bearer token. See /developers."
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "deviceKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key"
+      }
+    },
+    "schemas": {
+      "Device": {
+        "type": "object",
+        "properties": {
+          "imei": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plate": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Reading"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Reading": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "device": {
+            "type": "object",
+            "properties": {
+              "imei": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "plate": {
+                "type": "string"
+              }
+            }
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "envelope": {
+            "type": "object",
+            "description": "Request-level fields as received (schema, imei, iccid, fw, boot)"
+          },
+          "payload": {
+            "type": "object",
+            "description": "The reading exactly as received (fgt/2.0)"
+          },
+          "derived": {
+            "type": "object",
+            "properties": {
+              "time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "time_src": {
+                "type": "string",
+                "enum": [
+                  "device",
+                  "server"
+                ]
+              },
+              "position": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "lat": {
+                    "type": "number"
+                  },
+                  "lng": {
+                    "type": "number"
+                  },
+                  "src": {
+                    "type": "string",
+                    "enum": [
+                      "gnss",
+                      "cell"
+                    ]
+                  },
+                  "acc_m": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "fuel": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tank": {},
+                    "litres": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "level_pct": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "calibrated": {
+                      "type": "boolean"
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/ingest": {
+      "post": {
+        "tags": [
+          "device"
+        ],
+        "summary": "Receive readings from a vehicle unit",
+        "security": [
+          {
+            "deviceKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "schema",
+                  "imei",
+                  "boot",
+                  "readings"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{\"ok\": true, \"stored\": n, \"duplicates\": m}"
+          },
+          "400": {
+            "description": "Body rejected"
+          },
+          "401": {
+            "description": "Missing, unknown or disabled device key"
+          },
+          "403": {
+            "description": "IMEI does not match the key"
+          },
+          "413": {
+            "description": "Body too large"
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "developer API"
+        ],
+        "summary": "Service health (no token needed)",
+        "responses": {
+          "200": {
+            "description": "{\"ok\": true}"
+          }
+        }
+      }
+    },
+    "/api/v1/devices": {
+      "get": {
+        "tags": [
+          "developer API"
+        ],
+        "summary": "All devices with their latest reading",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Device"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or revoked token"
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{imei}": {
+      "get": {
+        "tags": [
+          "developer API"
+        ],
+        "summary": "One device with its latest reading",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "imei",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Device"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or revoked token"
+          },
+          "404": {
+            "description": "Unknown device"
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{imei}/readings": {
+      "get": {
+        "tags": [
+          "developer API"
+        ],
+        "summary": "Readings of one device, newest first",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "imei",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": ""
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 100
+            }
+          },
+          {
+            "name": "before_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "received at or after"
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "received before"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Readings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Reading"
+                      }
+                    },
+                    "next_before_id": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or revoked token"
+          },
+          "404": {
+            "description": "Unknown device"
+          },
+          "422": {
+            "description": "Bad parameter"
+          }
+        }
+      }
+    },
+    "/api/v1/readings": {
+      "get": {
+        "tags": [
+          "developer API"
+        ],
+        "summary": "All readings in arrival order, for syncing your own database",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 500
+            }
+          },
+          {
+            "name": "imei",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Readings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Reading"
+                      }
+                    },
+                    "next_after_id": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or revoked token"
+          },
+          "422": {
+            "description": "Bad parameter"
+          }
+        }
+      }
+    },
+    "/api/v1/readings/{reading_id}": {
+      "get": {
+        "tags": [
+          "developer API"
+        ],
+        "summary": "One reading by id",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "reading_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reading",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reading"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or revoked token"
+          },
+          "404": {
+            "description": "Unknown reading"
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{imei}/calibrations": {
+      "get": {
+        "tags": [
+          "developer API"
+        ],
+        "summary": "Active calibration profile per tank",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "imei",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calibrations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "tank": {
+                            "type": "integer"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "profile": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or revoked token"
+          }
+        }
+      }
+    },
+    "/api/v1/stream": {
+      "get": {
+        "tags": [
+          "developer API"
+        ],
+        "summary": "Live Server-Sent Events stream of new readings",
+        "description": "One `reading` event per new reading, id = reading id. Each connection lasts about two minutes; reconnect with Last-Event-ID to continue without gaps. Browsers may pass ?token= instead of the header.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "imei",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "only for EventSource in browsers"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "text/event-stream"
+          },
+          "401": {
+            "description": "Missing, malformed or revoked token"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Vehicles{% endblock %} | car.mwizerwa.com</title>
+<link rel="stylesheet" href="/static/style.css">
+{% block head %}{% endblock %}
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>car.mwizerwa.com</a>
+  <nav aria-label="Main">
+    {% set here = request.url.path %}
+    {% if user %}
+    <a href="/" {% if here == '/' or here.startswith('/devices') or here.startswith('/readings') %}aria-current="page"{% endif %}>Vehicles</a>
+    <a href="/admin" {% if here.startswith('/admin') %}aria-current="page"{% endif %}>Settings</a>
+    {% endif %}
+    <a href="/developers" {% if here == '/developers' %}aria-current="page"{% endif %}>Developers</a>
+    {% if user %}
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button type="submit">Sign out</button></form>
+    {% else %}
+    <a href="/login">Sign in</a>
+    {% endif %}
+  </nav>
+</header>
+<main>
+{% if msg %}<p class="note" role="status">{{ msg }}</p>{% endif %}
+{% block main %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

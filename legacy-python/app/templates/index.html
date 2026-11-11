@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import fuel_cell, pos_cell, signal_cell %}
+{% block title %}Vehicles{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/leaflet.css">{% endblock %}
+{% block main %}
+<div class="page-head">
+  <h1>Vehicles</h1>
+  <p>{{ n_online }} of {{ rows | length }} reporting now. Times in {{ tz_name }}.</p>
+</div>
+
+{% if rows %}
+<div id="map" class="map" aria-label="Last known positions"></div>
+<script type="application/json" id="map-data">{{ map_data | safe }}</script>
+
+<div class="table-wrap">
+<table>
+  <thead><tr>
+    <th>Vehicle</th><th>Last report</th><th>Fuel</th><th>Position</th><th>Ignition</th>
+    <th class="num">Supply</th><th>4G</th><th class="num">Waiting</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}{% set it = r.it %}{% set p = it.payload if it else {} %}
+  <tr>
+    <td><span class="dot{% if online(r.d.last_seen_at) %} on{% endif %}" title="{{ 'Reporting' if online(r.d.last_seen_at) else 'Not reporting' }}"></span><a href="/devices/{{ r.d.imei }}">{{ r.d.name or r.d.imei }}</a>
+      <div class="small">{{ r.d.plate or 'no plate' }}{% if not r.d.active %}, disabled{% endif %}</div></td>
+    <td class="nowrap">{{ r.d.last_seen_at | ago }}<div class="small">{{ r.d.last_seen_at | fmt_time }}</div></td>
+    <td>{{ fuel_cell(it) }}</td>
+    <td>{{ pos_cell(it) }}</td>
+    <td>{% if p.veh is mapping and p.veh.ign is not none %}{{ 'On' if p.veh.ign else 'Off' }}{% else %}—{% endif %}</td>
+    <td class="num nowrap">{% if p.veh is mapping and p.veh.ext_mv %}{{ '%.1f' % (p.veh.ext_mv / 1000) }} V{% else %}—{% endif %}</td>
+    <td class="nowrap">{{ signal_cell(it) }}</td>
+    <td class="num">{{ p.q.queued if p.q is mapping and p.q.queued is not none else '—' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty">No vehicles yet. <a href="/admin">Register a unit</a> with its IMEI to get its device key.</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="/static/leaflet.js"></script><script src="/static/map.js"></script>{% endblock %}

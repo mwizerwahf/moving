@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "_macros.html" import gauge, fuel_cell, pos_cell, signal_cell %}
+{% block title %}{{ d.name or d.imei }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/leaflet.css">{% endblock %}
+{% block main %}
+<div class="page-head">
+  <h1>{{ d.name or 'Unnamed vehicle' }}</h1>
+  {% if d.plate %}<span class="plate">{{ d.plate }}</span>{% endif %}
+  <p><span class="dot{% if online(d.last_seen_at) %} on{% endif %}"></span>{{ 'Reporting' if online(d.last_seen_at) else 'Not reporting' }}, last report {{ d.last_seen_at | ago }}. IMEI <span class="mono">{{ d.imei }}</span>{% if not d.active %}. Disabled: new reports are refused{% endif %}.</p>
+</div>
+
+{% if latest %}{% set f = latest.derived.fuel[0] if latest.derived.fuel else none %}{% set p = latest.payload %}
+<dl class="facts">
+  <div class="fact"><dt>Fuel</dt>
+    <dd>{% if f and f.litres is not none %}{{ '%.1f' % f.litres }} L <span class="small">{{ '%.0f' % f.level_pct }}%</span>{{ gauge(f.level_pct, true) }}{% else %}<span class="small">{{ fuel_cell(latest) }}</span>{% endif %}</dd></div>
+  <div class="fact"><dt>Position</dt>
+    <dd>{% if latest.derived.position %}{{ 'GPS' if latest.derived.position.src == 'gnss' else 'Cell tower' }}{% if latest.derived.position.acc_m %} <span class="small">±{{ latest.derived.position.acc_m | round | int }} m</span>{% endif %}{% else %}<span class="small">none yet</span>{% endif %}</dd></div>
+  <div class="fact"><dt>Ignition</dt>
+    <dd>{% if p.veh is mapping and p.veh.ign is not none %}{{ 'On' if p.veh.ign else 'Off' }}{% else %}—{% endif %}</dd></div>
+  <div class="fact"><dt>Vehicle supply</dt>
+    <dd>{% if p.veh is mapping and p.veh.ext_mv %}{{ '%.1f' % (p.veh.ext_mv / 1000) }} V{% else %}—{% endif %}</dd></div>
+  <div class="fact"><dt>4G</dt><dd>{{ signal_cell(latest) }}</dd></div>
+  <div class="fact"><dt>Readings stored</dt><dd>{{ total }}</dd></div>
+</dl>
+{% endif %}
+
+<div id="map" class="map" aria-label="Recent route and last position"></div>
+<script type="application/json" id="map-data">{{ map_data | safe }}</script>
+
+<h2>Readings</h2>
+{% if items %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Measured</th><th>Received</th><th class="num">Seq</th><th>Fuel</th><th>Position</th><th>Ignition</th><th>4G</th><th></th></tr></thead>
+  <tbody>
+  {% for it in items %}
+  <tr>
+    <td class="nowrap">{{ it.derived.time | fmt_time }}{% if it.derived.time_src == 'server' %} <span class="small">server</span>{% endif %}</td>
+    <td class="nowrap small">{{ it.received_at | fmt_time }}</td>
+    <td class="num">{{ it.payload.seq }}</td>
+    <td>{{ fuel_cell(it) }}</td>
+    <td>{{ pos_cell(it) }}</td>
+    <td>{% if it.payload.veh is mapping and it.payload.veh.ign is not none %}{{ 'On' if it.payload.veh.ign else 'Off' }}{% else %}—{% endif %}</td>
+    <td class="nowrap">{{ signal_cell(it) }}</td>
+    <td><a href="/readings/{{ it.id }}">Raw</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if next_before %}<p class="pager"><a href="/devices/{{ d.imei }}?before_id={{ next_before }}">Older readings</a></p>{% endif %}
+{% else %}
+<div class="empty">No readings yet. The unit sends to <span class="mono">/ingest</span> with its device key once it has a 4G connection.</div>
+{% endif %}
+
+<div class="grid-2">
+<section id="calibration">
+  <h2>Fuel calibration</h2>
+  {% if cals %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Tank</th><th>Method</th><th class="num">Capacity</th><th class="num">Points</th><th>Saved</th><th></th></tr></thead>
+    <tbody>{% for c in cals %}
+    <tr><td>{{ c.tank }}</td><td>{{ c.profile.method }} <span class="small">{{ c.profile.model }}</span></td>
+      <td class="num">{{ c.profile.capacity_l }} L</td><td class="num">{{ c.profile.table | length }}</td>
+      <td class="small">{{ c.created_at | fmt_time }}, {{ c.created_by }}</td>
+      <td><form class="inline" method="post" action="/devices/{{ d.imei }}/calibration/{{ c.tank }}/remove"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="danger" type="submit">Remove</button></form></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <p class="small">No calibration yet, so fuel shows as raw sensor values. Fill the tank in known steps, note the raw value at each step, and save the points below.</p>
+  {% endif %}
+  <h3>Save a calibration</h3>
+  <p class="small">Paste an fgt-cal/2.0 profile. Saving replaces the profile for that tank; earlier readings are recalculated.</p>
+  <form class="stack" method="post" action="/devices/{{ d.imei }}/calibration">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <label>Profile <textarea name="profile" spellcheck="false">{{ example }}</textarea></label>
+    <div><button type="submit">Save calibration</button></div>
+  </form>
+</section>
+
+<section>
+  <h2>Vehicle details</h2>
+  <form class="stack" method="post" action="/devices/{{ d.imei }}/settings">
+    <input type="hidden" name="csrf" value="{{ user.csrf }}">
+    <label>Name <input type="text" name="name" value="{{ d.name }}" maxlength="64"></label>
+    <label>Number plate <input type="text" name="plate" value="{{ d.plate }}" maxlength="32"></label>
+    <label class="check"><input type="checkbox" name="active" value="1" {% if d.active %}checked{% endif %}> Accept reports from this unit</label>
+    <div><button type="submit">Save details</button></div>
+  </form>
+  <h3>Device key</h3>
+  <p class="small">Replace the key if a unit is lost or its key may have leaked. The unit stops reporting until its firmware has the new key.</p>
+  <form method="post" action="/devices/{{ d.imei }}/rotate-key"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="danger" type="submit">Replace device key</button></form>
+</section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/leaflet.js"></script><script src="/static/map.js"></script>{% endblock %}

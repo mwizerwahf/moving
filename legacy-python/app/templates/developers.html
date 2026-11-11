@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Developers{% endblock %}
+{% block main %}
+<div class="page-head"><h1>Developer guide</h1>
+<p>Read vehicle data from {{ public_url }} to build your own app.</p></div>
+
+<p>Every reading a vehicle sends is stored and passed on unchanged. You can fetch readings, follow them live, or have them pushed to your server. All three give the same JSON object. Ask the account owner for an API token, then send it with every request:</p>
+<pre class="json">Authorization: Bearer at_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</pre>
+
+<h2>The reading object</h2>
+<p><span class="mono">payload</span> is the reading exactly as the vehicle sent it, in the fgt/2.0 format. <span class="mono">envelope</span> holds the request-level fields (schema, imei, iccid, fw, boot). <span class="mono">derived</span> is added by the gateway: the chosen position, and litres from the tank's calibration.</p>
+<pre class="json">{
+  "id": 1842,
+  "device": {"imei": "866123456789012", "name": "Hilux 1", "plate": "RAD 123 A"},
+  "received_at": "2026-11-01T09:12:44.512Z",
+  "envelope": {"schema": "fgt/2.0", "imei": "866123456789012", "iccid": "8925010000123456789",
+               "fw": "3.0.0", "boot": "a1b2c3d4"},
+  "payload": {"seq": 42, "ts": "2026-11-01T09:12:40Z", "ts_src": "gnss", "uptime_ms": 215004,
+              "gnss": {...}, "cell": {...}, "cell_loc": null, "veh": {...}, "fuel": [...], "q": {...}},
+  "derived": {
+    "time": "2026-11-01T09:12:40Z", "time_src": "device",
+    "position": {"lat": -1.944123, "lng": 30.061233, "src": "gnss", "acc_m": 5.5},
+    "fuel": [{"tank": 1, "litres": 45.2, "level_pct": 56.5, "calibrated": true, "note": null}]
+  }
+}</pre>
+<p><span class="mono">position.src</span> is <span class="mono">gnss</span> (satellite fix) or <span class="mono">cell</span> (cell tower, with <span class="mono">acc_m</span> often hundreds of metres). <span class="mono">position</span> is null when neither is known. <span class="mono">litres</span> is null until the tank is calibrated; <span class="mono">note</span> says why.</p>
+
+<h2>Endpoints</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Request</th><th>Returns</th></tr></thead>
+<tbody>
+<tr><td class="mono">GET /api/v1/devices</td><td>Every vehicle with its latest reading</td></tr>
+<tr><td class="mono">GET /api/v1/devices/{imei}</td><td>One vehicle with its latest reading</td></tr>
+<tr><td class="mono">GET /api/v1/devices/{imei}/readings?limit=100&amp;before_id=&amp;since=&amp;until=</td><td>History, newest first. Pass <span class="mono">next_before_id</span> back as <span class="mono">before_id</span> for the next page. since and until are ISO 8601 times.</td></tr>
+<tr><td class="mono">GET /api/v1/readings?after_id=0&amp;limit=500&amp;imei=</td><td>Everything in arrival order. Store <span class="mono">next_after_id</span> and call again to stay in sync.</td></tr>
+<tr><td class="mono">GET /api/v1/readings/{id}</td><td>One reading</td></tr>
+<tr><td class="mono">GET /api/v1/devices/{imei}/calibrations</td><td>Active calibration profile for each tank</td></tr>
+<tr><td class="mono">GET /api/v1/stream?imei=&amp;after_id=</td><td>Live Server-Sent Events, one <span class="mono">reading</span> event per new reading</td></tr>
+<tr><td class="mono">GET /api/v1/health</td><td>Service check, no token needed</td></tr>
+</tbody></table></div>
+<p>Errors return a status code with <span class="mono">{"detail": "..."}</span>: 401 for a missing or revoked token, 404 for an unknown IMEI or reading. The full schema is at <a href="/api/docs">/api/docs</a>.</p>
+
+<h2>Follow readings live</h2>
+<p>The stream sends each reading as it arrives, with its <span class="mono">id</span> as the event id. If the connection drops, reconnect with the <span class="mono">Last-Event-ID</span> header (browsers do this for you) and missed readings are replayed first. A comment line is sent every 15 seconds to keep the connection open.</p>
+<pre class="json">curl -N -H "Authorization: Bearer $TOKEN" {{ public_url }}/api/v1/stream
+
+id: 1842
+event: reading
+data: {"id":1842,"device":{...},"payload":{...},"derived":{...}}</pre>
+<p>Browsers cannot add headers to EventSource, so a browser page may pass <span class="mono">?token=</span> instead. Only do this from your own back end; a token in a web page can be copied.</p>
+
+<h2>Receive readings by webhook</h2>
+<p>The account owner can add your HTTPS address in Settings. Each new reading is POSTed to it as JSON, the same object with <span class="mono">"event": "reading.created"</span> added. Answer with any 2xx status within 10 seconds; otherwise the gateway retries with growing waits, up to 10 times. The same reading can arrive twice, so use <span class="mono">id</span> to ignore repeats.</p>
+<p>Check every request before trusting it. The headers are <span class="mono">X-FGT-Timestamp</span> (Unix seconds) and <span class="mono">X-FGT-Signature</span>, which is <span class="mono">sha256=</span> followed by the HMAC-SHA256 of <span class="mono">timestamp + "." + raw body</span>, keyed with the webhook secret. Reject requests whose timestamp is more than 5 minutes old.</p>
+<pre class="json">import hashlib, hmac, time
+
+def is_genuine(secret: str, timestamp: str, body: bytes, signature: str) -> bool:
+    if abs(time.time() - int(timestamp)) > 300:
+        return False
+    mac = hmac.new(secret.encode(), timestamp.encode() + b"." + body, hashlib.sha256)
+    return hmac.compare_digest("sha256=" + mac.hexdigest(), signature)</pre>
+
+<h2>For unit firmware</h2>
+<p>Units send fgt/2.0 to <span class="mono">POST {{ public_url }}/ingest</span> with their device key in the <span class="mono">X-Api-Key</span> header. The answer is <span class="mono">{"ok": true, "stored": n, "duplicates": m}</span> with status 200, including for readings already received, so the unit can clear its queue. 400 means the body was rejected and will not be accepted on retry; 401 or 403 means the key or IMEI is wrong.</p>
+{% endblock %}

@@ -1,0 +1,26 @@
+# Cloudflare Pages configuration. Cloudflare reads this file on every deploy (Git or CLI),
+# so settings and the database binding live here, not in the dashboard.
+name = "car-gateway"
+pages_build_output_dir = "public"
+compatibility_date = "2025-09-01"
+
+[vars]
+# Leave PUBLIC_URL empty to use whatever address the site is opened on (e.g. *.pages.dev).
+# After you add the custom domain, set it to "https://car.mwizerwa.com".
+PUBLIC_URL = ""
+DISPLAY_TZ = "Africa/Kigali"
+ONLINE_SECONDS = "180"
+# The D1 free plan holds 500 MB per database: keep about 3 months of readings.
+RETENTION_DAYS = "90"
+# Raw HTTP bodies (the "as received" box on a reading's page) take as much room as the
+# readings themselves; keep them for a week only.
+RAW_BODY_DAYS = "7"
+SESSION_HOURS = "12"
+# OPENCELLID_KEY is a secret: set it in the dashboard (Settings > Variables and Secrets),
+# never in this file.
+
+[[d1_databases]]
+binding = "DB"
+database_name = "car-gateway"
+# Replace with the id printed by: npx wrangler d1 create car-gateway
+database_id = "00000000-0000-0000-0000-000000000000"

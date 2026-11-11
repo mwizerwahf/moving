@@ -1,0 +1,34 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 256KB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	reverse_proxy app:8000 {
+		# send live-stream events immediately
+		flush_interval -1
+	}
+}
+
+# Fallback ONLY if the 4G module cannot do HTTPS: also accept plain-HTTP /ingest.
+# The device key then travels unencrypted over the mobile network. To enable, remove
+# the leading "# " from the block below and run: docker compose restart caddy
+#
+# http://{$DOMAIN} {
+# 	request_body {
+# 		max_size 256KB
+# 	}
+# 	handle /ingest {
+# 		reverse_proxy app:8000
+# 	}
+# 	handle {
+# 		redir https://{host}{uri} 308
+# 	}
+# }
