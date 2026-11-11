@@ -20,7 +20,7 @@ SESSION_HOURS = "12"
 # never in this file.
 
 [[d1_databases]]
-binding = "DB"
+binding = "car_gateway"
 database_name = "car-gateway"
 # Replace with the id printed by: npx wrangler d1 create car-gateway
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "3140a7b0-06ae-4c9a-add4-18e177734635"
