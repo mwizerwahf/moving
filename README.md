@@ -104,9 +104,15 @@ git push
 
 ### 8. Create the Pages project from GitHub
 
+Make sure you create a **Pages** project, not a Worker. Cloudflare's **Create** button opens the
+Workers form by default. If the setup form has a **Deploy command** field (filled with
+`npx wrangler deploy`), you are on the wrong form: the build then fails with "Missing entry-point to
+Worker script". Go back and use the Pages link instead.
+
 1. Open https://dash.cloudflare.com, then **Workers & Pages** in the left menu.
-2. Click **Create** (or **Create application**), choose the **Pages** tab, then **Import an existing
-   Git repository** (or **Connect to Git**).
+2. Click **Create** (or **Create application**). Then either choose the **Pages** tab, or, if there
+   is no tab, click the small link **Looking to deploy Pages? Get started** at the bottom. Then
+   choose **Import an existing Git repository** (or **Connect to Git**).
 3. Choose **GitHub**, authorise Cloudflare, and allow it access to the `moving` repository.
 4. Select `mwizerwahf/moving` and click **Begin setup**.
 5. Fill in:
